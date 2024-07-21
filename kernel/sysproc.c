@@ -91,3 +91,31 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+uint64
+sys_trace(void)
+{
+  int mask;
+  
+  argint(0,&mask);
+  if(mask < 0) 
+    return -1;
+  myproc()->syscall_trace |= mask;
+  return 0;
+}
+#include "sysinfo.h"
+uint64
+sys_sysinfo(void)
+{
+  //
+  uint64 addr;
+  argaddr(0, &addr);
+  struct sysinfo sinfo;
+  sinfo.freemem = count_free_mem();
+  sinfo.nproc = count_process();
+  //
+  //
+  if(copyout(myproc()->pagetable, addr, (char *)&sinfo, sizeof(sinfo)) < 0)
+    return -1;
+  return 0;
+}
+
