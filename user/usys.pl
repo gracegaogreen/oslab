@@ -14,7 +14,9 @@ sub entry {
     print " ecall\n";
     print " ret\n";
 }
-	
+
+entry("mmap");
+entry("munmap");
 entry("fork");
 entry("exit");
 entry("wait");

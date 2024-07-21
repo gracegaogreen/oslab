@@ -1,3 +1,10 @@
+#ifndef FILE_H
+#define FILE_H
+
+#include "sleeplock.h" // 包含 sleeplock 的定义
+#include "fs.h" // 包含 NDIRECT 的定义
+#include "types.h"
+
 struct file {
   enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;
   int ref; // reference count
@@ -38,3 +45,4 @@ struct devsw {
 extern struct devsw devsw[];
 
 #define CONSOLE 1
+#endif // FILE_H
