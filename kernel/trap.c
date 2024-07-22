@@ -70,42 +70,42 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if(r_scause() == 0xd){
-    uint64 va = r_stval();//出错的虚拟地址
-    int idx = -1;
-    for(int i = 0; i < 16; i++)//通过出错地址寻找对应的VAM同时判断其合法性
-      if(va >= p->vma[i].addr && va < p->vma[i].addr + p->vma[i].length){
-        idx = i;
-        break;
-      }
-    if(idx == -1)goto err;
+      uint64 va = r_stval(); // Faulting virtual address
+      int idx = -1;
+      for(int i = 0; i < 16; i++) // Find the corresponding VMA by faulting address and check its validity
+        if(va >= p->vma[i].addr && va < p->vma[i].addr + p->vma[i].length){
+          idx = i;
+          break;
+        }
+      if(idx == -1) goto err;
 
-    char *mem;
-    if((mem = kalloc()) == 0)//物理内存实在不够
-      setkilled(p);
-    else{
-      memset(mem, 0, PGSIZE);
-      va = PGROUNDDOWN(va);
-      struct inode *ip = p->vma[idx].file->ip;
-      ilock(ip);
-      readi(ip, 0, (uint64)mem, p->vma[idx].offset + (va - p->vma[idx].addr), PGSIZE);//读取文件内容
-      iunlock(ip);
-
-      int pte_flag = PTE_U;//设置标志位，需要注意的是我们映射的是用户态的页表
-      if(p->vma[idx].prot & PROT_READ) pte_flag |= PTE_R;
-      if(p->vma[idx].prot & PROT_WRITE) pte_flag |= PTE_W;
-      if(p->vma[idx].prot & PROT_EXEC) pte_flag |= PTE_X;
-
-      if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, pte_flag) != 0){
-        kfree(mem);
+      char *mem;
+      if((mem = kalloc()) == 0) // Physical memory is insufficient
         setkilled(p);
+      else{
+        memset(mem, 0, PGSIZE);
+        va = PGROUNDDOWN(va);
+        struct inode *ip = p->vma[idx].file->ip;
+        ilock(ip);
+        readi(ip, 0, (uint64)mem, p->vma[idx].offset + (va - p->vma[idx].addr), PGSIZE); // Read file content
+        iunlock(ip);
+
+        int pte_flag = PTE_U; // Set flag bits, note that we are mapping the user page table
+        if(p->vma[idx].prot & PROT_READ) pte_flag |= PTE_R;
+        if(p->vma[idx].prot & PROT_WRITE) pte_flag |= PTE_W;
+        if(p->vma[idx].prot & PROT_EXEC) pte_flag |= PTE_X;
+
+        if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, pte_flag) != 0){
+          kfree(mem);
+          setkilled(p);
+        }
       }
-    }
   }
   else {
-  err:
-    printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    setkilled(p);
+    err:
+      printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+      printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      setkilled(p);
   }
 
   if(killed(p))

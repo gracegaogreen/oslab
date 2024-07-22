@@ -511,31 +511,31 @@ uint64 sys_mmap(void){
   argint(1, &length);
   argint(2, &prot);
   argint(3, &flags);
-  if(argfd(4,&fd, &file) < 0)
+  if(argfd(4, &fd, &file) < 0)
     return -1;
-  argint(5,&offset);
+  argint(5, &offset);
 
-  if(addr < 0 || length < 0 || prot < 0 ||  offset < 0)
+  if(addr < 0 || length < 0 || prot < 0 || offset < 0)
     return -1;
-  if((prot & PROT_READ) && !file->readable)//判断读权限
+  if((prot & PROT_READ) && !file->readable) // Check read permissions
     return -1;
-  if((flags & MAP_SHARED) && (prot & PROT_WRITE) && !file->writable)//判断写权限
+  if((flags & MAP_SHARED) && (prot & PROT_WRITE) && !file->writable) // Check write permissions
     return -1;
 
-  length = PGROUNDUP(length);//对齐
+  length = PGROUNDUP(length); // Align length
   struct proc *p = myproc();
-  if(p->sz + length > MAXVA)//判断是否还有虚拟内存
+  if(p->sz + length > MAXVA) // Check if there is enough virtual memory
     return -1;
 
   int idx = -1;
-  for(int i = 0; i < 16; i++)//分配VAM
+  for(int i = 0; i < 16; i++) // Allocate VMA
     if(p->vma[i].addr == 0){
       idx = i;
       break;
     }
-  if(idx == -1)return -1;
+  if(idx == -1) return -1;
 
-  p->vma[idx].addr = p->sz;//由内核决定映射文件的虚拟地址
+  p->vma[idx].addr = p->sz; // Kernel decides the virtual address to map the file
   p->vma[idx].length = length;
   p->vma[idx].prot = prot;
   p->vma[idx].flags = flags;
@@ -544,41 +544,43 @@ uint64 sys_mmap(void){
   p->vma[idx].file = file;
   p->vma[idx].free_len = 0;
 
-  p->sz += length;//lazy分配
-  filedup(file);//增加文件引用计数
-  return p->vma[idx].addr;//这里要返回以前的p->sz
+  p->sz += length; // Lazy allocation
+  filedup(file); // Increase file reference count
+  return p->vma[idx].addr; // Return the previous p->sz
 }
+
 uint64 sys_munmap(void){
    uint64 addr;
    int length;
    argaddr(0, &addr);
    argint(1, &length);
-   if(addr < 0 || length < 0)return -1;
+   if(addr < 0 || length < 0) return -1;
 
    struct proc *p = myproc();
    int idx = -1;
-   for(int i = 0; i < 16; i++)//寻找对应VAM
+   for(int i = 0; i < 16; i++) // Find the corresponding VMA
      if(addr >= p->vma[i].addr && addr < p->vma[i].addr + p->vma[i].length){
        idx = i;
        break;
      }
-   if(idx == -1)return -1;
+   if(idx == -1) return -1;
 
-   length = PGROUNDUP(length);//对齐
+   length = PGROUNDUP(length); // Align length
    addr = PGROUNDDOWN(addr);
-   if(p->vma[idx].free_len + p->vma[idx].addr != addr)//必须从上次取消的结尾开始取消
+   if(p->vma[idx].free_len + p->vma[idx].addr != addr) // Must unmap from the end of the previous unmap
      return -1;
 
-   if(p->vma[idx].flags & MAP_SHARED)//需要写回
+   if(p->vma[idx].flags & MAP_SHARED) // Write back if needed
      filewrite(p->vma[idx].file, addr, length);
 
-   uvmunmap(p->pagetable, addr, length/PGSIZE, 1);//取消映射
+   uvmunmap(p->pagetable, addr, length/PGSIZE, 1); // Unmap
 
-   if(p->vma[idx].free_len + length == p->vma[idx].length){//若释放了mmap所有映射页面，我们需要减少对于文件的引用并释放VMA
+   if(p->vma[idx].free_len + length == p->vma[idx].length){ // If all mapped pages are unmapped, decrease the file reference count and free the VMA
      fileclose(p->vma[idx].file);
      p->vma[idx].addr = 0;
+   } else {
+     p->vma[idx].free_len += length;
    }
-   else p->vma[idx].free_len += length;
 
    return 0;
 }

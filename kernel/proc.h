@@ -81,15 +81,15 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-struct VMA{
-  uint64 addr;//虚拟内存起始地址 
-  int length;//要映射的字节数
-  int prot;//页表标志位
-  int flags;//是否要写回文件
-  int fd;//文件描述符
-  int offset;//偏移量(映射文件起始点)
-  struct file *file;//文件结构体
-  int free_len;//被取消映射的长度
+struct VMA {
+  uint64 addr;      // Starting address of the virtual memory region
+  int length;       // Number of bytes to map
+  int prot;         // Page table flags (protection flags)
+  int flags;        // Flags indicating whether to write back to the file
+  int fd;           // File descriptor
+  int offset;       // Offset (starting point in the file to map)
+  struct file *file;// File structure
+  int free_len;     // Length of the unmapped region
 };
 
 // Per-process state

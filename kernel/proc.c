@@ -289,8 +289,9 @@ fork(void)
     return -1;
   }
   
-  memmove((char*)np->vma,(char*)p->vma,sizeof p->vma);//拷贝VMA
-  for(int i = 0; i < 16 ;i++)//增加引用
+  memmove((char*)np->vma,(char*)p->vma,sizeof p->vma);//copy VMA
+  //increase the reference count
+  for(int i = 0; i < 16 ;i++)
     if(np->vma[i].addr) 
       filedup(np->vma[i].file);
   
@@ -361,9 +362,9 @@ exit(int status)
     if(p->vma[i].addr){
       int len = p->vma[i].length - p->vma[i].free_len;
       uint64 addr = p->vma[i].addr + p->vma[i].free_len;
-      if(p->vma[i].flags & MAP_SHARED)//需要写回
+      if(p->vma[i].flags & MAP_SHARED)//need to write back
         filewrite(p->vma[i].file, addr, len);
-      uvmunmap(p->pagetable, addr, len/PGSIZE, 1);//释放映射
+      uvmunmap(p->pagetable, addr, len/PGSIZE, 1);//umap the memory
       fileclose(p->vma[i].file);
       p->vma[i].addr = 0;
     }

@@ -179,7 +179,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0)continue;//忽略由lazy分配而未映射的页面
+    if((*pte & PTE_V) == 0)continue;//Ignore pages that have not been mapped due to lazy allocation
       //panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
@@ -313,7 +313,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)continue;//忽略由lazy分配而未映射的页面
+    if((*pte & PTE_V) == 0)continue;//Ignore pages that have not been mapped due to lazy allocation.
       //panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
