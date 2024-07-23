@@ -85,20 +85,19 @@ count_free_mem(void)
 {
   struct run *r;
   
-  //
-  acquire(&kmem.lock);
+  acquire(&kmem.lock);// Acquire the lock to protect the free list
   
-  //
+  //Initialize the memory byte counter to 0
   uint64 mem_bytes = 0;
   r = kmem.freelist;
-  //
+  
+  //Traverse the free list and count the total free memory
   while(r){
     mem_bytes += PGSIZE;
     r = r->next;
   }
   
-  //
-  release(&kmem.lock);
+  release(&kmem.lock);//Release the lock after accessing the free list
   return mem_bytes;
 }
 

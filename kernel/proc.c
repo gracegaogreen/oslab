@@ -311,7 +311,7 @@ fork(void)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
   
-  np->syscall_trace = p->syscall_trace;
+  np->syscall_trace = p->syscall_trace;//acquire parent's mask
 
   pid = np->pid;
 
@@ -690,7 +690,8 @@ count_process(void)
   struct proc *p;
   uint64 process_num = 0;
   
-  //循环读所有的进程，并且查看其状态，可用进程就让process_num，然后返回
+  //Loop through all the processes and check their status
+  //for each available process, increment process_num, then return
   for(p = proc; p < &proc[NPROC]; p++){
   	if(p->state != UNUSED)
   	  process_num++;

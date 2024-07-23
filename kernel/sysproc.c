@@ -106,14 +106,13 @@ sys_trace(void)
 uint64
 sys_sysinfo(void)
 {
-  //
   uint64 addr;
-  argaddr(0, &addr);
+  argaddr(0, &addr);//Get the address provided by the user
   struct sysinfo sinfo;
-  sinfo.freemem = count_free_mem();
-  sinfo.nproc = count_process();
-  //
-  //
+  sinfo.freemem = count_free_mem();// Get the amount of free memory in the system
+  sinfo.nproc = count_process();// Get the number of processes that are not in UNUSED state
+
+  //// Copy the sysinfo structure from kernel space to user space at the given address
   if(copyout(myproc()->pagetable, addr, (char *)&sinfo, sizeof(sinfo)) < 0)
     return -1;
   return 0;
