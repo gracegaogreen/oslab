@@ -78,15 +78,17 @@ kalloc(void)
 {
     struct run* r;
 
+    // Disable interrupts and get the current CPU ID
     push_off();
     int cpu = cpuid();
     pop_off();
 
+    // Try to allocate a page from the current CPU's free list
     acquire(&kmem[cpu].lock);
     r = kmem[cpu].freelist;
     if (r)
         kmem[cpu].freelist = r->next;
-    else // steal page from other CPU
+    else // If no pages are available, attempt to steal from other CPUs
     {
         struct run* tmp;
         for (int i = 0; i < NCPU; ++i)
@@ -100,12 +102,13 @@ kalloc(void)
             }
             else {
                 for (int j = 0; j < 1024; j++) {
-                    // steal 1024 pages
+                    // Try to steal up to 1024 pages
                     if (tmp->next)
                         tmp = tmp->next;
                     else
                         break;
                 }
+                // Transfer pages from other CPU's free list to the current CPU's free list
                 kmem[cpu].freelist = kmem[i].freelist;
                 kmem[i].freelist = tmp->next;
                 tmp->next = 0;
@@ -119,6 +122,7 @@ kalloc(void)
     }
     release(&kmem[cpu].lock);
 
+    // If a page was allocated, fill it with a specific value (5) for debugging purposes
     if (r)
         memset((char*)r, 5, PGSIZE); // fill with junk
     return (void*)r;

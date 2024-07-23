@@ -34,8 +34,10 @@ void
 binit(void)
 {
     struct buf* b;
-
+    
+    // Initialize the global lock for the buffer cache
     initlock(&bcache.lock, "bcache");
+    // Initialize the hash bucket locks and linked listsv
     for (int i = 0; i < NBUCKET; i++) {
         initlock(&bcache.hashlock[i], "bcache");
 
@@ -60,10 +62,10 @@ bget(uint dev, uint blockno)
 {
     struct buf* b;
 
-    uint hashcode = blockno % NBUCKET;
-    acquire(&bcache.hashlock[hashcode]);
+    uint hashcode = blockno % NBUCKET;// Compute the hash code for the block number
+    acquire(&bcache.hashlock[hashcode]);// Acquire the lock for the corresponding hash bucket
 
-    // Is the block already cached?
+    // Check if the block is already cached
     for (b = bcache.head[hashcode].next; b != &bcache.head[hashcode]; b = b->next) {
         if (b->dev == dev && b->blockno == blockno) {
             b->refcnt++;
@@ -73,8 +75,8 @@ bget(uint dev, uint blockno)
         }
     }
 
-    // Not cached.
-    // Recycle the least recently used (LRU) unused buffer.
+    // If the block is not cached, find an unused buffer to recycle
+    // Recycle the least recently used (LRU) unused buffer
     for (b = bcache.head[hashcode].prev; b != &bcache.head[hashcode]; b = b->prev) {
         if (b->refcnt == 0) {
             b->dev = dev;
@@ -86,6 +88,7 @@ bget(uint dev, uint blockno)
             return b;
         }
     }
+    // If no buffer is available, release the lock and panic
     release(&bcache.hashlock[hashcode]);
     panic("bget: no buffers");
 }
@@ -118,14 +121,15 @@ bwrite(struct buf *b)
 void
 brelse(struct buf* b)
 {
+    // Ensure that the buffer lock is held
     if (!holdingsleep(&b->lock))
         panic("brelse");
 
-    releasesleep(&b->lock);
+    releasesleep(&b->lock);// Release the buffer's sleep lock
 
-    uint hashcode = b->blockno % NBUCKET;
-    acquire(&bcache.hashlock[hashcode]);
-    b->refcnt--;
+    uint hashcode = b->blockno % NBUCKET;// Compute the hash code for the block number
+    acquire(&bcache.hashlock[hashcode]);// Acquire the lock for the corresponding hash bucket
+    b->refcnt--;// Decrement the reference count
     if (b->refcnt == 0) {
         // no one is waiting for it.
         b->next->prev = b->prev;
@@ -136,7 +140,7 @@ brelse(struct buf* b)
         bcache.head[hashcode].next = b;
     }
 
-    release(&bcache.hashlock[hashcode]);
+    release(&bcache.hashlock[hashcode]);// Release the hash bucket lock
 }
 
 void
