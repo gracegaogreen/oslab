@@ -75,15 +75,18 @@ int
 sys_pgaccess(void)
 {
   // lab pgtbl: your code here.
+  // Declare variables for the starting virtual address, number of pages, and the user address for storing access bits
   uint64 va;
   int pagenum;
   uint64 abitsaddr;
+  // Get the arguments from the user space
   argaddr(0, &va);
   argint(1, &pagenum);
   argaddr(2, &abitsaddr);
 
-  uint64 maskbits = 0;
-  struct proc *proc = myproc();
+  uint64 maskbits = 0;// Initialize the mask for the accessed bits to zero
+  struct proc *proc = myproc(); // Get the current process
+  // Loop through each page to check if it has been accessed
   for (int i = 0; i < pagenum; i++) {
     pte_t *pte = walk(proc->pagetable, va+i*PGSIZE, 0);
     if (pte == 0)
@@ -94,6 +97,7 @@ sys_pgaccess(void)
     // clear PTE_A, set PTE_A bits zero
     *pte = ((*pte&PTE_A) ^ *pte) ^ 0 ;
   }
+  // Copy the maskbits to the user address space
   if (copyout(proc->pagetable, abitsaddr, (char *)&maskbits, sizeof(maskbits)) < 0)
     panic("sys_pgacess copyout error");
   return 0;
@@ -102,7 +106,7 @@ sys_pgaccess(void)
 
 uint64
 sys_kill(void)
-{
+{a
   int pid;
 
   argint(0, &pid);

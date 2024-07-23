@@ -442,22 +442,27 @@ static int printdeep = 0;
 void
 vmprint(pagetable_t pagetable)
 {
+  // If this is the top-level page table, print its address.
   if (printdeep == 0)
     printf("page table %p\n", (uint64)pagetable);
+    
+  // Iterate over all 512 entries in the page table.
   for (int i = 0; i < 512; i++) {
     pte_t pte = pagetable[i];
+    
+    // If the PTE is valid, print its index, PTE value, and physical address.
     if (pte & PTE_V) {
       for (int j = 0; j <= printdeep; j++) {
-        printf("..");
+        printf("..");// Indent based on the depth of the page table level.
       }
       printf("%d: pte %p pa %p\n", i, (uint64)pte, (uint64)PTE2PA(pte));
     }
     // pintes to lower-level page table
     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
-      printdeep++;
+      printdeep++;// Increase the depth for the next level.
       uint64 child_pa = PTE2PA(pte);
-      vmprint((pagetable_t)child_pa);
-      printdeep--;
+      vmprint((pagetable_t)child_pa);// Recursive call to print the lower-level page table.
+      printdeep--;// Decrease the depth after returning from the recursion.
     }
   }
 }
