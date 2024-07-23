@@ -1,0 +1,6 @@
+1. 通过堆栈回溯可以看到，函数usertrap()调用了syscall()函数。
+2. 这里的系统调用号为7，这个系统调用为SYS_exec。
+3. user mode
+4. 内核panic发生在lw a3,0(zero)，num代表a3寄存器。
+5. 内核因为地址0处的内存数据而崩溃（Load page fault），地址0并不映射到内核空间中，scause中的异常代码证实了上述观点。
+6. 这个用户程序是 initcode,pid为1。
