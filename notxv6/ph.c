@@ -65,12 +65,12 @@ get(int key)
 {
   int i = key % NBUCKET;
 
-
+  pthread_mutex_lock(&lock[i]);
   struct entry *e = 0;
   for (e = table[i]; e != 0; e = e->next) {
     if (e->key == key) break;
   }
-
+  pthread_mutex_unlock(&lock[i]); 
   return e;
 }
 
