@@ -394,7 +394,6 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
         p->killed = 1;
       }else {
         memmove(mem, (char*)pa0, PGSIZE);
-        // PAY ATTENTION!!!
         // This statement must be above the next statement
         uint flags = PTE_FLAGS(*pte);
         // decrease the reference count of old memory that va0 point
