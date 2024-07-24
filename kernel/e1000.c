@@ -101,23 +101,23 @@ e1000_transmit(struct mbuf *m)
   // the mbuf contains an ethernet frame; program it into
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
-  acquire(&e1000_lock);  //
-int idx = regs[E1000_TDT];  //
-
-if(!(tx_ring[idx].status & E1000_TXD_STAT_DD)){ //
-  release(&e1000_lock);//
-  return -1;
-}
-
-if(tx_mbufs[idx]) //
-  mbuffree(tx_mbufs[idx]);
+  acquire(&e1000_lock);  // Acquire lock to ensure exclusive access to transmission descriptor ring
+  int idx = regs[E1000_TDT];  //Get the current index of the next available transmission descriptor
+  //Check if the current descriptor is free (indicated by DD status bit)
+  if(!(tx_ring[idx].status & E1000_TXD_STAT_DD)){ 
+    release(&e1000_lock);//
+    return -1;
+  }
+  // Free the previous mbuf if it exists
+  if(tx_mbufs[idx]) 
+    mbuffree(tx_mbufs[idx]);
  
-tx_mbufs[idx] = m; //
-tx_ring[idx].addr = (uint64)m->head; //
-tx_ring[idx].length = m->len;  //
-tx_ring[idx].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;  //
-regs[E1000_TDT] = (regs[E1000_TDT] + 1) % TX_RING_SIZE; //
-release(&e1000_lock); //
+  tx_mbufs[idx] = m; //Associate the new mbuf with the current descriptor
+  tx_ring[idx].addr = (uint64)m->head; //Set the address of the data buffer
+  tx_ring[idx].length = m->len;  //Set the length of the data buffer
+  tx_ring[idx].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;  //Set the command bits to indicate end of packet and report status
+  regs[E1000_TDT] = (regs[E1000_TDT] + 1) % TX_RING_SIZE; //Update the transmit descriptor tail pointer to indicate the next descriptor
+  release(&e1000_lock); //Release the lock after programming the descriptor
   
   return 0;
 }
@@ -133,25 +133,27 @@ e1000_recv(void)
   //
   // 
   //
+// Loop to continuously check for incoming packets
 while(1){
-  int idx = (regs[E1000_RDT] + 1) % RX_RING_SIZE; //
-  
-  if(!(rx_ring[idx].status & E1000_RXD_STAT_DD)) //
+  int idx = (regs[E1000_RDT] + 1) % RX_RING_SIZE; //Calculate the next index of the receive descriptor
+
+  // Check if the descriptor is marked as done (DD status bit)
+  if(!(rx_ring[idx].status & E1000_RXD_STAT_DD)) 
      return;
   
-  rx_mbufs[idx]->len = rx_ring[idx].length; //
+  rx_mbufs[idx]->len = rx_ring[idx].length; //Set the length of the mbuf to the received packet length
 
-  net_rx(rx_mbufs[idx]); //
+  net_rx(rx_mbufs[idx]); //Pass the received mbuf to the network stack
   
-  //
+  //Allocate a new mbuf for the descriptor
   rx_mbufs[idx] = mbufalloc(0); 
   if(!rx_mbufs[idx])
     panic("e1000");
-  //
+  //Clear the status of the descriptor and set the new buffer address
   rx_ring[idx].status = 0;
   rx_ring[idx].addr = (uint64)rx_mbufs[idx]->head;
   
-  //
+  //Update the receive descriptor tail pointer
   regs[E1000_RDT] = idx;
 }
 
