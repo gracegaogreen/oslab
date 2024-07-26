@@ -106,7 +106,7 @@ sys_pgaccess(void)
 
 uint64
 sys_kill(void)
-{a
+{
   int pid;
 
   argint(0, &pid);
